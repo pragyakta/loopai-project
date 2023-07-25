@@ -18,7 +18,7 @@ const CsvDataComponent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   //const [options, setOptions] = useState<string[]>([]);
   //const [loading, setLoading] = useState(false);
-  const [filterValues, setFilterValues] = useState<Record<string, number | null>>({
+  const [filterValues, setFilterValues] = useState<Record<string, Array<String> | null>>({
     mod3: null,
     mod4: null,
     mod5: null,
@@ -41,7 +41,6 @@ const CsvDataComponent: React.FC = () => {
         if (parseData && parseData.data) {
           const validData: CsvData[] = parseData.data as CsvData[];
           setCsvData(validData);
-          
         }
       });
   }, []);
@@ -62,11 +61,13 @@ const CsvDataComponent: React.FC = () => {
 
  
 
-  const handleModChange = (column: string, value: number | null) => {
-    console.log(`Filter Changed: ${column} - ${value}`);
+  const handleModChange = (column: string, values: any | null) => {
+    console.log(`Filter Changed: ${column} - ${values}`);
+    console.log(column, values)
+    let selectedValues: Array<string>  = values?.map((value: { key: any; }) => value.key)
     setFilterValues((prev) => ({
       ...prev,
-      [column]: value,
+      [column]: selectedValues,
     }));
   };
 
@@ -78,21 +79,24 @@ const CsvDataComponent: React.FC = () => {
 
   const filteredData = useMemo(() => {
     // Check if any filter value is not null
-    const anyFilterApplied = Object.values(filterValues).some((value) => value !== null);
-  
+    const anyFilterApplied = Object.values(filterValues).some((value) => value !== null && value !== undefined);
+   
     if (anyFilterApplied) {
       const filtered = csvData.filter((row) => {
-        return Object.keys(filterValues).every((column) => {
-          const selectedValue = filterValues[column];
-          return selectedValue === null || row[column] === selectedValue;
-        });
+        if(filterValues["mod3"]?.includes(row.mod3.toString()) || filterValues["mod4"]?.includes(row.mod4.toString()) || filterValues["mod5"]?.includes(row.mod5.toString())
+        || filterValues["mod6"]?.includes(row.mod6.toString())){
+          return (
+            (!filterValues["mod3"] || filterValues["mod3"].includes(row.mod3.toString())) &&
+            (!filterValues["mod4"] || filterValues["mod4"].includes(row.mod4.toString())) &&
+            (!filterValues["mod5"] || filterValues["mod5"].includes(row.mod5.toString())) &&
+            (!filterValues["mod6"] || filterValues["mod6"].includes(row.mod6.toString()))
+          )
+        }
+        
       });
-  
-      console.log("Filtered Data:", filtered); // Add this log
-  
+
       return filtered;
     } else {
-      // If no filter applied, return the paginated data
       return csvData;
     }
   }, [csvData, filterValues]);
@@ -105,17 +109,12 @@ const CsvDataComponent: React.FC = () => {
   }, [filteredData, currentPage, PageSize]);
 
   
- 
-  
   const getOptionsForColumn = (column: string): { key: string}[] => {
     const distinctValues = getDistinctValues(column);
     return distinctValues.map((value) => ({ key: value }));
   };
   
  
-
- 
-
   return (
     <div>
       <h2>CSV DATA</h2>
@@ -123,48 +122,60 @@ const CsvDataComponent: React.FC = () => {
         displayValue="key"
         options={getOptionsForColumn("mod3")}
         showCheckbox
+        placeholder="mod 3"
         onSelect={(selectedOptions: any) =>{
-
-            console.log("Selected Options for mod3:", selectedOptions);
-
-          handleModChange("mod3", selectedOptions.length > 0 ? parseInt(selectedOptions[0].key) : null)
+          handleModChange("mod3", selectedOptions.length > 0 ? selectedOptions : null)
         }}
+        onRemove={(removedOptions: any) =>{
+        handleModChange("mod3", removedOptions.length > 0 ? removedOptions : null)
+      }}
       />
       <Multiselect
         displayValue="key"
         options={getOptionsForColumn("mod4")}
         showCheckbox
-        onSelect={(selectedOptions: any) =>
-          handleModChange("mod4", selectedOptions.length > 0 ? parseInt(selectedOptions[0].key) : null)
-        }
-      />
-     <Multiselect
+        placeholder="mod 4"
+        onSelect={(selectedOptions: any) =>{
+          handleModChange("mod4", selectedOptions.length > 0 ? selectedOptions : null)
+        }}
+        onRemove={(removedOptions: any) =>{
+        handleModChange("mod4", removedOptions.length > 0 ? removedOptions : null)
+      }}/>
+      <Multiselect
         displayValue="key"
         options={getOptionsForColumn("mod5")}
         showCheckbox
-        onSelect={(selectedOptions: any) =>
-          handleModChange("mod5", selectedOptions.length > 0 ? parseInt(selectedOptions[0].key) : null)
-        }
-      />
+        placeholder="mod 5"
+        onSelect={(selectedOptions: any) =>{
+          handleModChange("mod5", selectedOptions.length > 0 ? selectedOptions : null)
+        }}
+        onRemove={(removedOptions: any) =>{
+        handleModChange("mod5", removedOptions.length > 0 ? removedOptions : null)
+      }}/>
       <Multiselect
         displayValue="key"
         options={getOptionsForColumn("mod6")}
         showCheckbox
-        onSelect={(selectedOptions: any) =>
-          handleModChange("mod6", selectedOptions.length > 0 ? parseInt(selectedOptions[0].key) : null)
-        }
-      />
+        placeholder="mod 6"
+        onSelect={(selectedOptions: any) =>{
+          handleModChange("mod6", selectedOptions.length > 0 ? selectedOptions : null)
+        }}
+        onRemove={(removedOptions: any) =>{
+        handleModChange("mod6", removedOptions.length > 0 ? removedOptions : null)
+      }}/>
+      
+
       <DataTable
         columns={columns}
         data={paginatedData}
         pagination
         paginationServer
-        paginationTotalRows={csvData.length}
+        paginationTotalRows={filteredData.length}
         paginationPerPage={PageSize}
         noHeader
         paginationComponent={() => (
           <Pagination
-            totalCount={csvData.length}
+            totalCount={filteredData.length}
             currentPage={currentPage}
             pageSize={PageSize}
             onPageChange={handlePageChange}
